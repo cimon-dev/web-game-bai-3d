@@ -1,0 +1,20 @@
+{
+  "name": "web-game-bai-3d",
+  "version": "1.0.0",
+  "private": true,
+  "description": "3D FPS Web Card Game - Tien Len Mien Nam",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "dev:client": "npm run dev --workspace=apps/client",
+    "dev:server": "npm run dev --workspace=apps/server",
+    "build": "npm run build --workspace=packages/shared && npm run build --workspace=apps/client && npm run build --workspace=apps/server",
+    "test": "npm run test --workspace=apps/server",
+    "typecheck": "npm run typecheck --workspace=packages/shared && npm run typecheck --workspace=apps/client && npm run typecheck --workspace=apps/server"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.5"
+  }
+}

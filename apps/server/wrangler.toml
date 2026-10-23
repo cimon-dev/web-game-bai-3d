@@ -1,0 +1,14 @@
+name = "web-game-bai-3d-server"
+main = "src/index.ts"
+compatibility_date = "2024-04-01"
+compatibility_flags = ["nodejs_compat"]
+
+[durable_objects]
+bindings = [
+  { name = "LOBBY", class_name = "LobbyDO" },
+  { name = "ROOMS", class_name = "RoomDO" }
+]
+
+[[migrations]]
+tag = "v1"
+new_classes = ["LobbyDO", "RoomDO"]
