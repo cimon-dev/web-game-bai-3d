@@ -166,4 +166,98 @@ describe('Compare and Cutting Rules Unit Tests', () => {
 
     expect(Compare.canBeat(bonDoiThong, tuQuy)).toBe(true);
   });
+
+  describe('findSmartSuggestion (Auto-predict card combinations)', () => {
+    it('Auto-predicts winning pair when clicking a card that pairs up to beat target pair', () => {
+      const targetPair = Combinations.detect([
+        createCard('6', 'spade'),
+        createCard('6', 'club'),
+      ])!;
+
+      const card7Spade = createCard('7', 'spade');
+      const card7Heart = createCard('7', 'heart');
+      const card9Diamond = createCard('9', 'diamond');
+      const hand = [card7Spade, card7Heart, card9Diamond];
+
+      // Click 7♠ -> Should suggest [7♠, 7♥]
+      const suggestion = Compare.findSmartSuggestion(card7Spade, hand, targetPair);
+      expect(suggestion).not.toBeNull();
+      expect(suggestion!.length).toBe(2);
+      expect(suggestion!.map(c => c.id)).toContain(card7Spade.id);
+      expect(suggestion!.map(c => c.id)).toContain(card7Heart.id);
+    });
+
+    it('Returns null if pair cannot beat target pair', () => {
+      const targetPair = Combinations.detect([
+        createCard('8', 'spade'),
+        createCard('8', 'club'),
+      ])!;
+
+      const card7Spade = createCard('7', 'spade');
+      const card7Heart = createCard('7', 'heart');
+      const hand = [card7Spade, card7Heart];
+
+      // 7 pair cannot beat 8 pair
+      const suggestion = Compare.findSmartSuggestion(card7Spade, hand, targetPair);
+      expect(suggestion).toBeNull();
+    });
+
+    it('Auto-predicts winning triple when clicking a card in a triple', () => {
+      const targetTriple = Combinations.detect([
+        createCard('5', 'spade'),
+        createCard('5', 'club'),
+        createCard('5', 'heart'),
+      ])!;
+
+      const card8Spade = createCard('8', 'spade');
+      const card8Club = createCard('8', 'club');
+      const card8Heart = createCard('8', 'heart');
+      const card3Spade = createCard('3', 'spade');
+      const hand = [card8Spade, card8Club, card8Heart, card3Spade];
+
+      const suggestion = Compare.findSmartSuggestion(card8Spade, hand, targetTriple);
+      expect(suggestion).not.toBeNull();
+      expect(suggestion!.length).toBe(3);
+      expect(suggestion!.map(c => c.id)).toContain(card8Spade.id);
+      expect(suggestion!.map(c => c.id)).toContain(card8Club.id);
+      expect(suggestion!.map(c => c.id)).toContain(card8Heart.id);
+    });
+
+    it('Auto-predicts winning straight containing clicked card', () => {
+      const targetStraight = Combinations.detect([
+        createCard('3', 'spade'),
+        createCard('4', 'club'),
+        createCard('5', 'diamond'),
+        createCard('6', 'spade'),
+      ])!;
+
+      const card4Spade = createCard('4', 'spade');
+      const card5Club = createCard('5', 'club');
+      const card6Diamond = createCard('6', 'diamond');
+      const card7Heart = createCard('7', 'heart');
+      const hand = [card4Spade, card5Club, card6Diamond, card7Heart];
+
+      // User clicks 7♥ -> Forms 4-5-6-7 which beats 3-4-5-6
+      const suggestion = Compare.findSmartSuggestion(card7Heart, hand, targetStraight);
+      expect(suggestion).not.toBeNull();
+      expect(suggestion!.length).toBe(4);
+      expect(suggestion!.map(c => c.id)).toContain(card7Heart.id);
+      expect(suggestion!.map(c => c.id)).toContain(card4Spade.id);
+    });
+
+    it('Auto-predicts Tu Quy when clicking card to chop single 2', () => {
+      const targetHeo = Combinations.detect([createCard('2', 'heart')])!;
+
+      const card9Spade = createCard('9', 'spade');
+      const card9Club = createCard('9', 'club');
+      const card9Diamond = createCard('9', 'diamond');
+      const card9Heart = createCard('9', 'heart');
+      const hand = [card9Spade, card9Club, card9Diamond, card9Heart];
+
+      const suggestion = Compare.findSmartSuggestion(card9Spade, hand, targetHeo);
+      expect(suggestion).not.toBeNull();
+      expect(suggestion!.length).toBe(4);
+    });
+  });
 });
+

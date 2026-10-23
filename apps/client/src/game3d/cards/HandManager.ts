@@ -1,4 +1,4 @@
-import { Card, sortCards } from '@game/shared';
+import { Card, CardCombination, Compare, sortCards } from '@game/shared';
 import gsap from 'gsap';
 import * as THREE from 'three';
 import { SoundEffects } from '../../audio/SoundEffects';
@@ -20,6 +20,7 @@ export class HandManager {
   private mouse = new THREE.Vector2();
 
   public onSelectionChanged?: (selectedCardIds: string[]) => void;
+  public getTargetCombination?: () => CardCombination | null;
 
   constructor(scene: THREE.Scene, camera: THREE.Camera) {
     this.scene = scene;
@@ -493,14 +494,53 @@ export class HandManager {
       const hit = intersects[0].object as THREE.Mesh;
       const cardMesh = hit.userData.cardMesh as CardMesh;
       if (cardMesh) {
-        this.toggleCardSelection(cardMesh);
+        this.handleCardClick(cardMesh);
       }
     }
   }
 
-  public toggleCardSelection(cardMesh: CardMesh): void {
+  public handleCardClick(cardMesh: CardMesh): void {
+    // 1. If clicking an already selected card, deselect it
+    if (cardMesh.isSelected) {
+      this.toggleCardSelection(cardMesh, false);
+      return;
+    }
+
+    // 2. If no cards are currently selected, try smart auto-prediction to beat table
+    if (this.selectedCards.size === 0 && this.getTargetCombination) {
+      const target = this.getTargetCombination();
+      if (target) {
+        const handCards = this.playerCardMeshes.map(cm => cm.card);
+        const suggestion = Compare.findSmartSuggestion(cardMesh.card, handCards, target);
+
+        if (suggestion && suggestion.length > 1) {
+          const suggestionIds = new Set(suggestion.map(c => c.id));
+          const meshesToSelect = this.playerCardMeshes.filter(cm => suggestionIds.has(cm.card.id));
+
+          if (meshesToSelect.length === suggestion.length) {
+            meshesToSelect.forEach(cm => {
+              this.toggleCardSelection(cm, true, false);
+            });
+            SoundEffects.getInstance().playCardSelect();
+            if (this.onSelectionChanged) {
+              this.onSelectionChanged(Array.from(this.selectedCards));
+            }
+            return;
+          }
+        }
+      }
+    }
+
+    // 3. Fallback: single card toggle
+    this.toggleCardSelection(cardMesh, true);
+  }
+
+  public toggleCardSelection(cardMesh: CardMesh, forceState?: boolean, notify: boolean = true): void {
     const cardId = cardMesh.card.id;
-    const isSelected = !cardMesh.isSelected;
+    const isSelected = forceState !== undefined ? forceState : !cardMesh.isSelected;
+    if (cardMesh.isSelected === isSelected && forceState !== undefined) {
+      return;
+    }
     cardMesh.setSelected(isSelected);
 
     const liftY = 0.095;
@@ -527,10 +567,12 @@ export class HandManager {
       });
     }
 
-    SoundEffects.getInstance().playCardSelect();
+    if (notify) {
+      SoundEffects.getInstance().playCardSelect();
 
-    if (this.onSelectionChanged) {
-      this.onSelectionChanged(Array.from(this.selectedCards));
+      if (this.onSelectionChanged) {
+        this.onSelectionChanged(Array.from(this.selectedCards));
+      }
     }
   }
 

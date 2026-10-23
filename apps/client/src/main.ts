@@ -85,6 +85,11 @@ class App {
       });
     };
 
+    // Provide current table combination for smart auto-predict selection
+    this.handManager.getTargetCombination = () => {
+      return !this.isFreeTurn ? this.currentTableCombination : null;
+    };
+
     // User gesture listener to unlock Web Audio
     const unlockAudio = () => {
       this.sfx.resume();
