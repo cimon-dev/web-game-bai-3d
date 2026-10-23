@@ -404,6 +404,9 @@ export class CharacterAvatar extends THREE.Group {
       // Face-down card
       const cardMesh = new CardMesh(dummyCard, false);
       cardMesh.scale.set(0.44, 0.44, 0.44);
+      // Remove self-shadowing acne and dark shading across opponent card fan
+      cardMesh.mesh.castShadow = false;
+      cardMesh.mesh.receiveShadow = false;
 
       const angle = startAngle + i * stepAngle;
       const cardZ = Math.cos(angle) * 0.05 + i * 0.003;

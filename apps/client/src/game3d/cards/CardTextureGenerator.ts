@@ -159,20 +159,20 @@ export class CardTextureGenerator {
     this.roundRect(ctx, 6, 6, width - 12, height - 12, radius);
     ctx.fill();
 
-    // Dark royal indigo background
-    ctx.fillStyle = '#1e1b4b';
+    // Classic Casino Crimson Red background
+    ctx.fillStyle = '#b91c1c';
     this.roundRect(ctx, 28, 28, width - 56, height - 56, radius - 10);
     ctx.fill();
 
-    // Pattern: Cartoon Diamond Lattice
+    // Pattern: Diamond Lattice
     ctx.save();
     ctx.beginPath();
     this.roundRect(ctx, 28, 28, width - 56, height - 56, radius - 10);
     ctx.clip();
 
-    ctx.strokeStyle = '#3730a3';
-    ctx.lineWidth = 6;
-    const step = 64;
+    ctx.strokeStyle = '#dc2626';
+    ctx.lineWidth = 5;
+    const step = 56;
     for (let x = -width; x < width * 2; x += step) {
       ctx.beginPath();
       ctx.moveTo(x, 0);
@@ -185,9 +185,15 @@ export class CardTextureGenerator {
       ctx.stroke();
     }
 
+    // Inner white pinstripe
+    ctx.strokeStyle = '#fef2f2';
+    ctx.lineWidth = 3;
+    this.roundRect(ctx, 48, 48, width - 96, height - 96, radius - 18);
+    ctx.stroke();
+
     // Golden Center Crest
     ctx.translate(width / 2, height / 2);
-    ctx.fillStyle = '#4338ca';
+    ctx.fillStyle = '#991b1b';
     ctx.beginPath();
     ctx.arc(0, 0, 130, 0, Math.PI * 2);
     ctx.fill();

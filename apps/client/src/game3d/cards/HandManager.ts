@@ -61,11 +61,10 @@ export class HandManager {
     const isMobileLandscape = window.innerHeight < 550 && (window.innerWidth / window.innerHeight) > 1.35;
 
     // Upright hand placement: floating comfortably above table felt (Y=0.84)
-    // On mobile landscape, tuck cards slightly lower and more compact so they fit comfortably at bottom
-    const handY = isMobileLandscape ? 0.88 : 0.93;
-    const handZ = isMobileLandscape ? 1.52 : 1.50;
-    const cardScale = isMobileLandscape ? 0.30 : 0.33;
-    const stepZ = 0.008;
+    const handY = isMobileLandscape ? 0.90 : 0.93;
+    const handZ = isMobileLandscape ? 1.50 : 1.50;
+    const cardScale = isMobileLandscape ? 0.31 : 0.33;
+    const stepZ = 0.003; // Layer step: Card i is slightly closer to camera than Card i-1
 
     const cardWidth = CardMesh.WIDTH * cardScale;
 
@@ -117,6 +116,9 @@ export class HandManager {
 
     const { stepX, startX, cardScale, handY, handZ, stepZ } = this.calculateLayout(count);
 
+    // Sightline compensation factor K so all cards project to the exact same horizontal screen Y
+    const K = (handY - 1.45) / (handZ - 2.2);
+
     this.playerCardMeshes.forEach((cardMesh, i) => {
       cardMesh.scale.set(cardScale, cardScale, cardScale);
       cardMesh.handIndex = i;
@@ -124,14 +126,15 @@ export class HandManager {
       cardMesh.mesh.renderOrder = i + 1;
 
       const targetX = startX + i * stepX;
-      const targetY = handY;
       const targetZ = handZ + i * stepZ;
+      // Sightline compensation guarantees perfectly horizontal cards (zero diagonal slanting!)
+      const targetY = 1.45 + K * (targetZ - 2.2);
 
       cardMesh.originalX = targetX;
       cardMesh.originalY = targetY;
       cardMesh.originalZ = targetZ;
 
-      const currentY = cardMesh.isSelected ? targetY + 0.12 : targetY;
+      const currentY = cardMesh.isSelected ? targetY + 0.095 : targetY;
 
       if (animate) {
         gsap.to(cardMesh.position, {
@@ -500,7 +503,7 @@ export class HandManager {
     const isSelected = !cardMesh.isSelected;
     cardMesh.setSelected(isSelected);
 
-    const liftY = 0.12;
+    const liftY = 0.095;
 
     if (isSelected) {
       this.selectedCards.add(cardId);

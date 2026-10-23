@@ -295,7 +295,7 @@ export class TienLenRule {
 
     const isLeadTurn = this.tableLastPlay === null;
 
-    // "nếu là lượt đầu tiên của người đó đánh (bắt đầu vòng/lượt tự do) thì mới là đánh quân nhỏ nhất"
+    // 1. If lead turn (beginning of trick or round), player MUST auto-play smallest card
     if (isLeadTurn) {
       const smallestCards = Compare.findSmallestPlayable(
         player.hand,
@@ -318,7 +318,26 @@ export class TienLenRule {
       }
     }
 
-    // Nếu không phải lượt đầu tiên (đã có bài trên bàn): tự động bỏ lượt
+    // 2. If it is this player's very first action in the match (they haven't played anything yet),
+    // and they have a card that can beat the table, auto-play it so they are not locked out of the game!
+    if (player.playedCardsCount === 0 && this.tableLastPlay) {
+      const playable = Compare.findSmallestPlayable(player.hand, this.tableLastPlay.combination);
+      if (playable && playable.length > 0) {
+        const cardIds = playable.map(c => c.id);
+        const res = this.playCards(playerId, cardIds);
+        if (res.success) {
+          return {
+            action: 'play',
+            cardIds,
+            isGameOver: res.isGameOver,
+            nextPlayerId: res.nextPlayerId || '',
+            scoreboard: res.scoreboard,
+          };
+        }
+      }
+    }
+
+    // 3. Otherwise, automatically pass turn and advance to the next active player
     const passRes = this.passTurn(playerId);
     return {
       action: 'pass',

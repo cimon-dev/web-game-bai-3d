@@ -372,32 +372,17 @@ class App {
 
       case 'TURN_START': {
         const { playerId, timeoutMs, isFreeTurn } = msg.payload;
-        this.isMyTurn = playerId === this.network.playerId;
-        this.isFreeTurn = isFreeTurn;
-
-        if (this.currentSnapshot) {
-          for (const p of this.currentSnapshot.players) {
-            p.isTurn = p.id === playerId;
-          }
-          this.updateOpponentsUI();
-        }
-
-        const currentTurnPlayer = this.currentSnapshot?.players.find(p => p.id === playerId);
-        const turnPlayerName = this.isMyTurn ? 'Bạn' : (currentTurnPlayer?.name || 'Đối thủ');
-        this.uiManager.updateTurnIndicator(this.isMyTurn, turnPlayerName, true);
-
+        this.applyTurnUpdate(playerId, isFreeTurn);
         this.uiManager.startTimer(Math.ceil(timeoutMs / 1000));
 
         if (this.isMyTurn) {
           this.uiManager.showToast('Đến lượt bạn đánh!', 'success');
         }
-
-        this.updateActionButtonsState(Array.from(this.handManager.selectedCards));
         break;
       }
 
       case 'CARDS_PLAYED': {
-        const { playerId, combination, remainingCardCount } = msg.payload;
+        const { playerId, combination, remainingCardCount, nextPlayerId } = msg.payload;
         const isMe = playerId === this.network.playerId;
         this.currentTableCombination = combination;
         this.firstTurn3SpadeRequired = false;
@@ -435,11 +420,15 @@ class App {
 
         // Show cards in center table (active trick + discard pile accumulation)
         this.handManager.showPlayedCards(combination.cards, isMe, playerSeat);
+
+        if (nextPlayerId) {
+          this.applyTurnUpdate(nextPlayerId, false);
+        }
         break;
       }
 
       case 'TURN_PASSED': {
-        const { playerId } = msg.payload;
+        const { playerId, nextPlayerId } = msg.payload;
         this.avatarManager.getAvatar(playerId)?.passAnimation();
 
         if (this.currentSnapshot) {
@@ -450,10 +439,15 @@ class App {
             this.uiManager.showToast(`${p.name} đã bỏ lượt.`);
           }
         }
+
+        if (nextPlayerId) {
+          this.applyTurnUpdate(nextPlayerId);
+        }
         break;
       }
 
       case 'ROUND_RESET': {
+        const { nextPlayerId } = msg.payload;
         this.currentTableCombination = null;
         this.isFreeTurn = true;
         this.handManager.onRoundReset();
@@ -464,6 +458,10 @@ class App {
           this.updateOpponentsUI();
         }
         this.uiManager.showToast('Bắt đầu vòng chơi mới!', 'info');
+
+        if (nextPlayerId) {
+          this.applyTurnUpdate(nextPlayerId, true);
+        }
         break;
       }
 
@@ -616,6 +614,25 @@ class App {
     if (reason) {
       this.uiManager.showToast(reason, 'info');
     }
+  }
+
+  private applyTurnUpdate(nextPlayerId: string, isFree?: boolean): void {
+    this.isMyTurn = nextPlayerId === this.network.playerId;
+    if (typeof isFree === 'boolean') {
+      this.isFreeTurn = isFree;
+    }
+
+    if (this.currentSnapshot) {
+      for (const p of this.currentSnapshot.players) {
+        p.isTurn = p.id === nextPlayerId;
+      }
+      this.updateOpponentsUI();
+    }
+
+    const currentTurnPlayer = this.currentSnapshot?.players.find(p => p.id === nextPlayerId);
+    const turnPlayerName = this.isMyTurn ? 'Bạn' : (currentTurnPlayer?.name || 'Đối thủ');
+    this.uiManager.updateTurnIndicator(this.isMyTurn, turnPlayerName, true);
+    this.updateActionButtonsState(Array.from(this.handManager.selectedCards));
   }
 
   private updateHostControls(): void {

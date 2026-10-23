@@ -93,7 +93,7 @@ export type ServerMessage =
   | BaseServerMessage<'GAME_STARTED', { firstPlayerId: string; turnTimeoutMs: number }>
   | BaseServerMessage<'HAND_DEALT', { cards: Card[] }>
   | BaseServerMessage<'TURN_START', { playerId: string; seatIndex: number; timeoutMs: number; isFreeTurn: boolean }>
-  | BaseServerMessage<'CARDS_PLAYED', { playerId: string; combination: CardCombination; remainingCardCount: number }>
+  | BaseServerMessage<'CARDS_PLAYED', { playerId: string; combination: CardCombination; remainingCardCount: number; nextPlayerId?: string }>
   | BaseServerMessage<'TURN_PASSED', { playerId: string; nextPlayerId: string }>
   | BaseServerMessage<'ROUND_RESET', { winnerId: string; nextPlayerId: string }>
   | BaseServerMessage<'GAME_OVER', { winnerId: string; scoreboard: ScoreboardEntry[] }>

@@ -272,6 +272,7 @@ export class RoomDO implements DurableObject {
               playerId,
               combination: res.combination!,
               remainingCardCount: player.hand.length,
+              nextPlayerId: res.nextPlayerId || undefined,
             },
           });
 
@@ -427,6 +428,7 @@ export class RoomDO implements DurableObject {
           playerId: currentId,
           combination: this.rule.tableLastPlay!.combination,
           remainingCardCount: player.hand.length,
+          nextPlayerId: autoRes.nextPlayerId || undefined,
         },
       });
 

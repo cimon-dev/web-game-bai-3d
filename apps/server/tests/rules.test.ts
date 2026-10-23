@@ -138,11 +138,17 @@ describe('TienLenRule Engine Unit Tests', () => {
     expect(auto1.cardIds).toEqual(['4_spade']);
     expect(rule.currentTurnPlayerId).toBe('p2');
 
-    // On following turn for p2, autoPlay automatically passes (per new rule)
+    // On player's first turn in match (playedCardsCount === 0), autoPlay plays lowest valid card to beat table
     const auto2 = rule.autoPlayTimeout('p2');
-    expect(auto2.action).toBe('pass');
-    expect(auto2.roundReset).toBe(true);
+    expect(auto2.action).toBe('play');
+    expect(auto2.cardIds).toEqual(['5_club']);
     expect(rule.currentTurnPlayerId).toBe('p1');
+
+    // On subsequent turn, player with playedCardsCount > 0 automatically passes if they time out
+    const auto3 = rule.autoPlayTimeout('p1');
+    expect(auto3.action).toBe('pass');
+    expect(auto3.roundReset).toBe(true);
+    expect(rule.currentTurnPlayerId).toBe('p2');
   });
 
   it('verifies game resets when only 1 player remains in room', () => {
