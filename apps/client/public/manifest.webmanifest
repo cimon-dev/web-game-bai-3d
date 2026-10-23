@@ -1,0 +1,10 @@
+{
+  "name": "Tiến Lên Miền Nam 3D",
+  "short_name": "Tiến Lên 3D",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "landscape",
+  "background_color": "#090d16",
+  "theme_color": "#090d16",
+  "description": "Game bài 3D FPS Tiến Lên Miền Nam đếm lá chơi online nhiều người."
+}

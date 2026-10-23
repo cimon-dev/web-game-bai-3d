@@ -91,6 +91,9 @@ export class UIManager {
             <button class="btn btn-secondary btn-profile-action" id="btn-open-settings">
               ⚙️ Cài đặt
             </button>
+            <button class="btn btn-secondary btn-profile-action" id="btn-lobby-fullscreen" title="Toàn màn hình">
+              ⛶ Toàn màn hình
+            </button>
           </div>
         </header>
 
@@ -190,6 +193,11 @@ export class UIManager {
     document.getElementById('btn-open-settings')?.addEventListener('click', () => {
       this.sfx.playButtonClick();
       this.showSettingsModal();
+    });
+
+    document.getElementById('btn-lobby-fullscreen')?.addEventListener('click', () => {
+      this.sfx.playButtonClick();
+      this.toggleFullscreen();
     });
 
     this.renderRoomGrid(callbacks.onJoinRoomId);
@@ -306,6 +314,9 @@ export class UIManager {
                 <button class="reaction-btn" data-emoji="💣" title="Chặt heo!">💣</button>
               </div>
             </div>
+            <button class="btn btn-secondary btn-header" id="btn-toggle-fullscreen" title="Toàn màn hình" style="padding: 8px 12px; font-size: 1.1rem;">
+              ⛶
+            </button>
             <button class="btn btn-secondary" id="btn-hud-settings" style="padding: 8px 14px;">
               ⚙️
             </button>
@@ -374,6 +385,11 @@ export class UIManager {
     document.getElementById('btn-host-start')?.addEventListener('click', () => {
       this.sfx.playButtonClick();
       callbacks.onHostStartGame();
+    });
+
+    document.getElementById('btn-toggle-fullscreen')?.addEventListener('click', () => {
+      this.sfx.playButtonClick();
+      this.toggleFullscreen();
     });
 
     document.getElementById('btn-hud-settings')?.addEventListener('click', () => {
@@ -1197,6 +1213,62 @@ export class UIManager {
     this.toastTimeout = window.setTimeout(() => {
       banner.remove();
     }, 3200);
+  }
+
+  public toggleFullscreen(): void {
+    if (document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {});
+      return;
+    }
+
+    if (document.documentElement.requestFullscreen) {
+      document.documentElement.requestFullscreen().catch(() => {
+        this.showIosFullscreenGuide();
+      });
+    } else {
+      // iOS Safari doesn't support requestFullscreen on standard HTML documents
+      this.showIosFullscreenGuide();
+    }
+  }
+
+  public showIosFullscreenGuide(): void {
+    const isIos = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    
+    const existing = document.getElementById('modal-fullscreen-guide');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'modal-fullscreen-guide';
+    modal.className = 'modal-backdrop ui-interactive';
+    modal.style.zIndex = '3000';
+    modal.innerHTML = `
+      <div class="modal-content glass-panel" style="max-width: 440px; text-align: center; padding: 24px;">
+        <div style="font-size: 2.4rem; margin-bottom: 8px;">📱</div>
+        <h3 style="font-family: var(--font-display); font-size: 1.25rem; margin-bottom: 12px; color: var(--color-primary);">
+          Chơi Toàn Màn Hình Tràn Viền
+        </h3>
+        <p style="font-size: 0.88rem; line-height: 1.6; color: var(--text-main); margin-bottom: 18px; text-align: left;">
+          ${isIos ? `
+            Để có trải nghiệm game 3D <b>100% toàn màn hình tràn viền không dính thanh địa chỉ</b> trên iPhone:<br/><br/>
+            <b>1.</b> Bấm biểu tượng <b>Chia sẻ</b> <span style="font-size: 1.1rem; vertical-align: middle;">⎋</span> (ô vuông có mũi tên lên) ở thanh dưới Safari.<br/>
+            <b>2.</b> Chọn <b>"Thêm vào MH chính"</b> (Add to Home Screen).<br/>
+            <b>3.</b> Mở game từ màn hình chính để chơi tràn viền mượt mà như app tải về!<br/><br/>
+            <i>Mẹo nhanh trong Safari: Chạm vào chữ <b>aA</b> trên thanh địa chỉ ➜ chọn <b>"Ẩn thanh công cụ"</b>.</i>
+          ` : `
+            Trình duyệt của bạn đang chặn chế độ toàn màn hình tự động. Bạn có thể bật chế độ toàn màn hình trong menu trình duyệt hoặc xoay ngang màn hình để trải nghiệm tốt nhất.
+          `}
+        </p>
+        <button class="btn btn-primary" id="btn-close-fs-guide" style="width: 100%;">
+          Đã Hiểu 👌
+        </button>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+    modal.querySelector('#btn-close-fs-guide')?.addEventListener('click', () => {
+      this.sfx.playButtonClick();
+      modal.remove();
+    });
   }
 
   private escapeHtml(str: string): string {

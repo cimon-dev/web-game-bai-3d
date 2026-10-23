@@ -55,16 +55,19 @@ class App {
 
   private initEvents(): void {
     const onWindowResize = () => {
-      const w = window.innerWidth;
-      const h = window.innerHeight;
+      const w = window.visualViewport ? window.visualViewport.width : window.innerWidth;
+      const h = window.visualViewport ? window.visualViewport.height : window.innerHeight;
       this.gameScene.handleResize(w, h);
       this.fpsCamera.handleResize(w, h);
       this.handManager.updateLayout(true);
     };
 
     window.addEventListener('resize', onWindowResize);
+    window.visualViewport?.addEventListener('resize', onWindowResize);
     window.addEventListener('orientationchange', () => {
-      setTimeout(onWindowResize, 150);
+      setTimeout(onWindowResize, 100);
+      setTimeout(onWindowResize, 350);
+      setTimeout(onWindowResize, 700);
     });
 
     // When card selection in 3D hand changes, dynamically validate combo and sync to opponent

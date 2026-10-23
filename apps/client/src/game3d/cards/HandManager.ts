@@ -58,31 +58,34 @@ export class HandManager {
     const aspect = pCam.aspect || (window.innerWidth / window.innerHeight);
     const fov = pCam.fov || 55;
 
+    const isMobileLandscape = window.innerHeight < 550 && (window.innerWidth / window.innerHeight) > 1.35;
+
     // Upright hand placement: floating comfortably above table felt (Y=0.84)
-    const handY = 0.93;
-    const handZ = 1.50;
-    const cardScale = 0.33;
+    // On mobile landscape, tuck cards slightly lower and more compact so they fit comfortably at bottom
+    const handY = isMobileLandscape ? 0.88 : 0.93;
+    const handZ = isMobileLandscape ? 1.52 : 1.50;
+    const cardScale = isMobileLandscape ? 0.30 : 0.33;
     const stepZ = 0.008;
 
-    const cardWidth = CardMesh.WIDTH * cardScale; // ~0.297
+    const cardWidth = CardMesh.WIDTH * cardScale;
 
-    // Viewing distance from camera (0, 1.45, 2.2) to hand plane (0, 0.93, 1.50)
+    // Viewing distance from camera (0, 1.45, 2.2) to hand plane
     const dy = 1.45 - handY;
     const dz = 2.2 - handZ;
-    const distToCards = Math.sqrt(dy * dy + dz * dz); // ~0.87m
+    const distToCards = Math.sqrt(dy * dy + dz * dz);
 
     const visibleHalfHeight = distToCards * Math.tan((fov * Math.PI) / 360);
     const visibleHalfWidth = visibleHalfHeight * aspect;
 
-    // 80% of the frustum half-width is the maximum boundary for the entire hand
-    // so there is always a generous 20% margin on both left and right edges!
-    const maxBoundX = visibleHalfWidth * 0.80;
+    // 82% of the frustum half-width is the maximum boundary for the entire hand
+    // so there is always a safe margin on both left and right edges!
+    const maxBoundX = visibleHalfWidth * 0.82;
     const maxUsableWidth = maxBoundX * 2;
 
     let stepX = 0;
     if (count > 1) {
       // Maximum stepX that guarantees the outermost card edges stay within [-maxBoundX, +maxBoundX]
-      const maxAllowedStep = Math.max(0.065, (maxUsableWidth - cardWidth) / (count - 1));
+      const maxAllowedStep = Math.max(0.060, (maxUsableWidth - cardWidth) / (count - 1));
 
       if (count === 2) {
         stepX = Math.min(0.32, maxAllowedStep);
@@ -95,8 +98,8 @@ export class HandManager {
       } else {
         // For larger hands (6 - 13 cards), cap at 0.16 and respect maxAllowedStep
         stepX = Math.min(0.16, maxAllowedStep);
-        // Ensure index strip (needs ~0.065) remains readable
-        stepX = Math.max(0.065, stepX);
+        // Ensure index strip (needs ~0.060) remains readable
+        stepX = Math.max(0.060, stepX);
       }
     }
 
@@ -383,28 +386,113 @@ export class HandManager {
   }
 
   private initInteraction(): void {
-    window.addEventListener('click', (e) => {
-      const target = e.target as HTMLElement;
-      // Do not raycast if clicking actual UI buttons, inputs, modals
-      if (target.closest('button, input, textarea, select, .modal-content, .action-card, .reactions-bar, .reactions-dropdown-wrap, .reactions-dropdown, .turn-indicator-badge, .action-bar, .color-swatch, .chip-btn, .avatar-pill-btn, .room-info-pill')) {
+    let startX = 0;
+    let startY = 0;
+    let startTime = 0;
+    let isTracking = false;
+    let lastTapTimestamp = 0;
+
+    const shouldIgnoreTarget = (target: EventTarget | null): boolean => {
+      const el = target as HTMLElement | null;
+      if (!el) return false;
+      // Only ignore if the user clicked an actual button, input, or open modal/dropdown
+      return !!el.closest('button, input, textarea, select, .modal-content, .reactions-dropdown, .btn, .copy-badge, .color-swatch');
+    };
+
+    const onPointerStart = (clientX: number, clientY: number, target: EventTarget | null) => {
+      if (shouldIgnoreTarget(target)) {
+        isTracking = false;
         return;
       }
+      startX = clientX;
+      startY = clientY;
+      startTime = performance.now();
+      isTracking = true;
+    };
 
-      this.mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
-      this.mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+    const onPointerEnd = (clientX: number, clientY: number, target: EventTarget | null) => {
+      if (!isTracking) return;
+      isTracking = false;
 
-      this.raycaster.setFromCamera(this.mouse, this.camera);
-      const meshesToTest = this.playerCardMeshes.map(cm => cm.mesh);
-      const intersects = this.raycaster.intersectObjects(meshesToTest, false);
+      if (shouldIgnoreTarget(target)) return;
 
-      if (intersects.length > 0) {
-        const hit = intersects[0].object as THREE.Mesh;
-        const cardMesh = hit.userData.cardMesh as CardMesh;
-        if (cardMesh) {
-          this.toggleCardSelection(cardMesh);
+      const dx = clientX - startX;
+      const dy = clientY - startY;
+      const dist = Math.hypot(dx, dy);
+      const dt = performance.now() - startTime;
+
+      // Tap gesture threshold: finger moved less than 20px and tap lasted under 450ms
+      if (dist < 20 && dt < 450) {
+        const now = performance.now();
+        if (now - lastTapTimestamp > 120) {
+          lastTapTimestamp = now;
+          this.selectCardAt(clientX, clientY);
         }
       }
+    };
+
+    // 1. Pointer events (Desktop & modern Mobile)
+    window.addEventListener('pointerdown', (e: PointerEvent) => {
+      onPointerStart(e.clientX, e.clientY, e.target);
     });
+
+    window.addEventListener('pointerup', (e: PointerEvent) => {
+      onPointerEnd(e.clientX, e.clientY, e.target);
+    });
+
+    // 2. Direct touch events fallback for iOS Safari WebKit quirks
+    window.addEventListener(
+      'touchstart',
+      (e: TouchEvent) => {
+        if (e.touches.length === 1) {
+          onPointerStart(e.touches[0].clientX, e.touches[0].clientY, e.target);
+        }
+      },
+      { passive: true }
+    );
+
+    window.addEventListener(
+      'touchend',
+      (e: TouchEvent) => {
+        if (e.changedTouches.length > 0) {
+          const t = e.changedTouches[0];
+          onPointerEnd(t.clientX, t.clientY, e.target);
+        }
+      },
+      { passive: true }
+    );
+
+    // 3. Mouse click fallback for desktop
+    window.addEventListener('click', (e: MouseEvent) => {
+      if (shouldIgnoreTarget(e.target)) return;
+      const now = performance.now();
+      if (now - lastTapTimestamp > 250) {
+        lastTapTimestamp = now;
+        this.selectCardAt(e.clientX, e.clientY);
+      }
+    });
+  }
+
+  public selectCardAt(clientX: number, clientY: number): void {
+    const canvas = document.getElementById('game-canvas') as HTMLCanvasElement;
+    const rect = canvas ? canvas.getBoundingClientRect() : { left: 0, top: 0, width: window.innerWidth, height: window.innerHeight };
+
+    if (!rect.width || !rect.height) return;
+
+    this.mouse.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+    this.mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+
+    this.raycaster.setFromCamera(this.mouse, this.camera);
+    const meshesToTest = this.playerCardMeshes.map(cm => cm.mesh);
+    const intersects = this.raycaster.intersectObjects(meshesToTest, false);
+
+    if (intersects.length > 0) {
+      const hit = intersects[0].object as THREE.Mesh;
+      const cardMesh = hit.userData.cardMesh as CardMesh;
+      if (cardMesh) {
+        this.toggleCardSelection(cardMesh);
+      }
+    }
   }
 
   public toggleCardSelection(cardMesh: CardMesh): void {
