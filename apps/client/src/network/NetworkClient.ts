@@ -67,9 +67,17 @@ export class NetworkClient {
 
   private getWsUrl(path: string): string {
     // 1. Check if explicit backend URL configured via environment (e.g. Vercel deployment)
-    const envUrl = (import.meta as unknown as { env: Record<string, string> }).env?.VITE_WS_BACKEND_URL;
+    const env = (import.meta as unknown as { env: Record<string, string> }).env || {};
+    const envUrl = env.VITE_WS_BACKEND_URL || env.VITE_WS_URL;
     if (envUrl) {
-      const cleanBase = envUrl.replace(/\/+$/, '');
+      let cleanBase = envUrl.trim().replace(/\/+$/, '');
+      if (cleanBase.startsWith('http://')) {
+        cleanBase = cleanBase.replace('http://', 'ws://');
+      } else if (cleanBase.startsWith('https://')) {
+        cleanBase = cleanBase.replace('https://', 'wss://');
+      } else if (!cleanBase.startsWith('ws://') && !cleanBase.startsWith('wss://')) {
+        cleanBase = `wss://${cleanBase}`;
+      }
       return `${cleanBase}${path}`;
     }
 
